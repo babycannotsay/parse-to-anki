@@ -2,7 +2,7 @@
 parse file and generate anki file
 
 ## Install
-
+`yarn add parse-to-anki`
 ## Suppoort
 - 解析打包html目录结构后的zip文件
 - 可运行在node和浏览器上
