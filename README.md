@@ -17,15 +17,15 @@ parse file and generate anki file
 注：解析加打包需要一定时间，请稍加等待
 
 ## TODO
-- [] 解析单个html文件
-- [] 解析单个markdown文件
-- [] 解析打包markdown目录结构后的zip文件
-- [] 解析csv及zip文件
-- [] 结合chrome扩展，支持更新anki卡片
-- [] 测试用例补充
-- [] husky
-- [] 完善中文文档
-- [] 英文文档
+- [ ] 解析单个html文件
+- [ ] 解析单个markdown文件
+- [ ] 解析打包markdown目录结构后的zip文件
+- [ ] 解析csv及zip文件
+- [ ] 结合chrome扩展，支持更新anki卡片
+- [ ] 测试用例补充
+- [ ] husky
+- [ ] 完善中文文档
+- [ ] 英文文档
 
 ## Example
 - [node example](./example/node/example.ts)
