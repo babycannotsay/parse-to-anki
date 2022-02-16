@@ -35,9 +35,11 @@ module.exports = {
     output: {
         path: path.resolve(__dirname, 'dist'),
         filename: 'index.min.js',
-        library: 'Parser',
-        libraryTarget: 'umd',
-        libraryExport: 'Parser'
+        library: {
+            name: 'Parser',
+            type: 'umd',
+            export: 'Parser',
+        },
     },
     target: 'web',
     devtool: process.env.NODE_ENV === 'development' ? 'source-map' : false,
