@@ -1,0 +1,63 @@
+{
+  "name": "parse-to-anki",
+  "version": "1.0.0",
+  "description": "parse file and generate anki file",
+  "main": "lib/index.js",
+  "browser": {
+    "./lib/index.js": "./dist/index.min.js"
+  },
+  "scripts": {
+    "webpack:dev": "NODE_ENV=development webpack",
+    "webpack:prod": "NODE_ENV=production webpack",
+    "analyzer": "webpack --json > stats.json && webpack-bundle-analyzer stats.json",
+    "test": "jest",
+    "ts-node": "ts-node",
+    "example:node": "ts-node example/node/example.ts",
+    "example:browser": "cd example/browser && open-cli index.html && echo 'pls select file where in example/input'",
+    "type-check": "tsc --noEmit",
+    "type-check:watch": "npm run type-check -- --watch",
+    "build": "npm run build:types && npm run build:js && npm run webpack:prod",
+    "build:types": "tsc --emitDeclarationOnly",
+    "build:js": "babel src --out-dir lib --extensions \".ts,.tsx\" --source-maps inline"
+  },
+  "keywords": [
+    "anki",
+    "apkg"
+  ],
+  "author": "babycannotsay<fuwanqun@qq.com>",
+  "bugs": {
+    "url": "https://github.com/babycannotsay/parse-to-anki/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/babycannotsay/parse-to-anki"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@babel/cli": "^7.17.0",
+    "@babel/core": "^7.17.0",
+    "@babel/plugin-proposal-class-properties": "^7.16.7",
+    "@babel/preset-env": "^7.16.11",
+    "@babel/preset-typescript": "^7.16.7",
+    "@types/jest": "^27.4.0",
+    "@typescript-eslint/eslint-plugin": "^5.10.2",
+    "@typescript-eslint/parser": "^5.10.2",
+    "cheerio": "^1.0.0-rc.10",
+    "clean-webpack-plugin": "^4.0.0",
+    "eslint": "^8.8.0",
+    "eslint-config-prettier": "^8.3.0",
+    "jest": "^27.5.0",
+    "open-cli": "^7.0.1",
+    "path-browserify": "^1.0.1",
+    "ts-loader": "^9.2.6",
+    "ts-node": "^10.4.0",
+    "typescript": "^4.5.5",
+    "webpack": "^5.69.0",
+    "webpack-bundle-analyzer": "^4.5.0",
+    "webpack-cli": "^4.9.2"
+  },
+  "dependencies": {
+    "cross-fetch": "^3.1.5",
+    "jszip": "^3.7.1"
+  }
+}

@@ -1,0 +1,7 @@
+/node_modules
+*.apkg
+/coverage
+yarn-error.log
+/lib
+/dist
+stats.json
