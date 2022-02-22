@@ -1,5 +1,7 @@
 import cheerio from 'cheerio'
-export default class WolaiParser {
+import BaseThirdParser from '../../src/base-third-parser'
+
+export default class WolaiParser extends BaseThirdParser {
     name = 'wolai'
 
     parseHTML (data: ArrayBuffer) {

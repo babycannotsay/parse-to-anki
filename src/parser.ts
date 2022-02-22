@@ -1,43 +1,36 @@
 import Zip from 'jszip'
 import { extname, basename, dirname } from 'path'
-import { Deck, Note, Model, Field, Card, Package, Media } from 'anki-apkg-generator'
+import { Deck, Note, Model, Field, Card, Package, Media, Template } from 'anki-apkg-generator'
 import MediaProcessor from './media-processor'
-
-class ThirdParser {
-    name!: string
-    parseHTML!: (data: ArrayBuffer) => {
-        title: string
-        front: string
-        back: string
-        name: string
-        isEmpty: boolean
-    }
-}
+import BaseThirdParser from './base-third-parser'
 
 export default class Parser {
-    public thirdParser: ThirdParser
-    constructor (thirdParser: ThirdParser) {
+    public thirdParser: BaseThirdParser
+    public templates: Template[]
+    public fields: Field[]
+    constructor (thirdParser: BaseThirdParser) {
         this.thirdParser = thirdParser
+        this.templates = [
+            {
+                name: 'Card 1',
+                qfmt: '{{Question}}',
+                afmt: '{{FrontSide}}{{Answer}}',
+            },
+        ]
+        this.fields = [
+            { name: 'Question' },
+            { name: 'Answer' },
+        ].map((f, index) => new Field(f.name).setOrd(index))
     }
 
     parseZip (zipName: string, data: ArrayBuffer) {
         return Zip.loadAsync(data).then(async zip => {
             const { files } = zip
             const mediaProcessor = new MediaProcessor()
-            const templates = [
-                {
-                    name: 'Card 1',
-                    qfmt: '{{Question}}',
-                    afmt: '{{FrontSide}}{{Answer}}',
-                },
-            ]
+            const { templates, fields } = this
             const card = new Card()
             const model = new Model(card)
-            const fields = [
-                { name: 'Question' },
-                { name: 'Answer' },
-            ]
-            model.setFields(fields.map((f, index) => new Field(f.name).setOrd(index)))
+            model.setFields(fields)
 
             const deckMap: { [key: string]: Deck } = {}
             for (const file of Object.values(files)) {
@@ -82,6 +75,36 @@ export default class Parser {
             const pkg = new Package(Object.values(deckMap), mediaProcessor.mediaList)
             return pkg.writeToFile()
         })
+    }
+
+    async parseJSON () {
+        const { templates, fields, thirdParser } = this
+        const { name } = thirdParser
+        const template = thirdParser.addSourceMedia()
+        const notes = await thirdParser.getNotes()
+        const card = new Card()
+        const model = new Model(card)
+        model.setFields(fields)
+        model.setName(name)
+        const deck = new Deck(name)
+        for (const { tags = [], ankiFront, ankiBack, title } of notes) {
+            const note = new Note(model)
+            note
+                .setFieldsValue([ ankiFront, ankiBack ])
+                .setId(Number(title))
+                .setName(title)
+                .setTags(tags)
+
+            deck.addNote(note)
+        }
+        templates[0].qfmt = `
+            ${template}
+            ${templates[0].qfmt}
+        `
+        card.setTemplates(templates)
+        const mediaList = thirdParser.getMediaList()
+        const pkg = new Package(deck, mediaList)
+        return pkg.writeToFile()
     }
 }
 

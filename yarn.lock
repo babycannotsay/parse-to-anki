@@ -1723,10 +1723,10 @@ ajv@^6.10.0, ajv@^6.12.4, ajv@^6.12.5:
     json-schema-traverse "^0.4.1"
     uri-js "^4.2.2"
 
-anki-apkg-generator@^1.0.0:
-  version "1.0.0"
-  resolved "https://registry.npmmirror.com/anki-apkg-generator/-/anki-apkg-generator-1.0.0.tgz#75387e3e773ac7ea863c8997f513068fea26ad90"
-  integrity sha512-rIi5qLQtIMfcJt3gWI5ClJSjL4xGat0D41mAROaaDYv0a4NRwg2R+vNBs/ZPzGBmxMjG4alxf1W5Jn1U7xtkGg==
+anki-apkg-generator@^1.0.2:
+  version "1.0.2"
+  resolved "https://registry.npmmirror.com/anki-apkg-generator/-/anki-apkg-generator-1.0.2.tgz#dd6636cd9d994600adcf3d0be0c7ce2f223adeae"
+  integrity sha512-Vn2IKrr5NaUC0SO2FpqWsZiEjuTeisle07fKwwnHoEH6m4w9AlDwYZO934yTHcjxDnC6gw5TjAgBX134/IFMhQ==
   dependencies:
     create-hash "^1.2.0"
     jszip "^3.7.1"
