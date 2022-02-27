@@ -21,7 +21,7 @@ parse file and generate anki file
 - [ ] 解析单个markdown文件
 - [ ] 解析打包markdown目录结构后的zip文件
 - [ ] 解析csv及zip文件
-- [ ] 结合chrome扩展，支持更新anki卡片
+- [ ] 结合chrome扩展，支持更新anki卡片(chrome扩展新开发必须用mv3版本，该版本不支持wasm，暂时搁置)
 - [ ] 测试用例补充
 - [ ] husky
 - [ ] 完善中文文档
