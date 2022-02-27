@@ -18,13 +18,18 @@
         class WolaiParser extends ParseToAnki.BaseThirdParser {
             name = 'wolai'
 
+            getName () {
+                return this.name
+            }
+
             parseHTML (data) {
                 const dec = new TextDecoder('utf-8')
                 const dom = new DOMParser()
                 const tempDom = dom.parseFromString(dec.decode(data), 'text/html')
                 const $ = tempDom.querySelector.bind(tempDom)
                 const hasImage = $('header > .image').classList.contains('has')
-                const hasIcon = $('header .title .banner .icon').dataset.symbol
+                const iconDom = $('header .title .banner .icon')
+                const hasIcon = iconDom.dataset.symbol || iconDom.classList.contains('icon-image')
                 // 无题头图和icon时删除image元素，去除头部空白
                 if (!hasImage && !hasIcon) {
                     $('header > .image').remove()
@@ -33,19 +38,20 @@
                 $('header > .title').style.padding = '0px'
                 $('article').style.padding = '0px'
                 // 删除子页面
-                $('.wolai-sub-page.wolai-block')?.remove()
+                while ($('.wolai-sub-page.wolai-block')) {
+                    $('.wolai-sub-page.wolai-block').remove()
+                }
                 // 折叠面板在anki客户端和安卓版会有2个箭头，因为无法去除自带的箭头，所以去掉图片的箭头
                 $('summary .marker')?.remove()
                 if ($('details > summary')) {
                     $('details > summary').style.paddingLeft = '0px'
                 }
 
-                const isEmpty = $('article').innerText === ''
+                const isEmpty = $('article').innerText === '' && !$('article img')
                 const back = $('article').outerHTML
                 const front = $('header').outerHTML
                 const title = $('.main-title').dataset.title
                 return {
-                    name: this.name,
                     title,
                     front,
                     back,
@@ -53,17 +59,18 @@
                 }
             }
         }
-        async function generateAnkiApkg (data) {
+        async function generateAnkiApkg (data, basename) {
 
             const parser = new ParseToAnki.Parser(new WolaiParser)
-            const file = await parser.parseZip('rootDeckName', data)
-            saveAs(file, 'test.apkg')
+            const file = await parser.parseZip(basename, data)
+            saveAs(file, `${basename}.apkg`)
         }
         const onChange = function (files) {
             const file = files[0]
+            const basename = file.name.replace('.zip', '')
             const reader = new FileReader()
             reader.onload = (event) => {
-                generateAnkiApkg(event.target.result)
+                generateAnkiApkg(event.target.result, basename)
             }
             reader.readAsArrayBuffer(file)
         }

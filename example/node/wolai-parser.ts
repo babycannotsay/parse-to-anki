@@ -1,14 +1,19 @@
 import cheerio from 'cheerio'
-import BaseThirdParser from '../../src/base-third-parser'
+import { BaseThirdParser } from '../../src'
 
 export default class WolaiParser extends BaseThirdParser {
     name = 'wolai'
+
+    getName () {
+        return this.name
+    }
 
     parseHTML (data: ArrayBuffer) {
         const dec = new TextDecoder('utf-8')
         const $ = cheerio.load(dec.decode(data))
         const hasImage = $('header > .image').hasClass('has')
-        const hasIcon = $('header .title .banner .icon').data('symbol')
+        const $icon = $('header .title .banner .icon')
+        const hasIcon = $icon.data('symbol') || $icon.hasClass('icon-image')
         // 无题头图和icon时删除image元素，去除头部空白
         if (!hasImage && !hasIcon) {
             $('header > .image').remove()
@@ -22,12 +27,11 @@ export default class WolaiParser extends BaseThirdParser {
         $('summary .marker').remove()
         $('details > summary').css('padding-left', '0px')
 
-        const isEmpty = $('article').text() === ''
+        const isEmpty = $('article').text() === '' && $('article img').length === 0
         const back = $.html($('article'))
         const front = $.html($('header'))
         const title = $('.main-title').data('title') as string
         return {
-            name: this.name,
             title,
             front,
             back,

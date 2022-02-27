@@ -17,12 +17,12 @@ const checkIfFile = (url: string) => {
     return new URL(url).pathname.split('/').pop()!.indexOf('.') > 0
 }
 
-async function replaceAsync (str: string, regex: RegExp, asyncFn: (...args: string[]) => Promise<string>) {
+async function replaceAsync (filename: string, str: string, regex: RegExp, asyncFn: (...args: string[]) => Promise<string>) {
     const tasks: Promise<string>[] = []
 
     // fill replacers with fake call
     str.replace(regex, (match: string, ...args: string[]) => {
-        const promise = asyncFn(match, ...args)
+        const promise = asyncFn(filename, match, ...args)
         tasks.push(promise)
         return match
     })
@@ -35,23 +35,25 @@ async function replaceAsync (str: string, regex: RegExp, asyncFn: (...args: stri
 export default class MediaProcessor {
     public mediaList: Media[] = []
     public sourceRegexp: RegExp
+    public mediaMap: { [key: string]: string } = {}
     constructor () {
         //                                  p1            p2          p3
         this.sourceRegexp = /(?:url\(&quot;(.*?)&quot;\)|(src|href)="([^"]*?)")/g
     }
-    parse (side: string) {
-        return replaceAsync(side, this.sourceRegexp, this.replacer.bind(this))
+    parse (filename: string, side: string, mediaMap: { [key: string]: string }) {
+        this.mediaMap = mediaMap
+        return replaceAsync(filename, side, this.sourceRegexp, this.replacer.bind(this))
     }
 
     private _getMatchPath (fromUrl: boolean, name: string, p: string) {
-        const decodeName = decodeURI(decodeURI(name))
         if (fromUrl) {
-            return `url(&quot;${decodeName}&quot;)`
+            return `url(&quot;${name}&quot;)`
         }
-        return `${p}="${decodeName}"`
+
+        return `${p}="${name}"`
     }
 
-    async replacer (match: string, p1: string, p2: string, p3: string) {
+    async replacer (filename: string, match: string, p1: string, p2: string, p3: string) {
         const fromUrl = match.startsWith('url')
         const p = fromUrl ? p1 : p3
         if (p.startsWith('http')) {
@@ -61,14 +63,17 @@ export default class MediaProcessor {
             const fileExt = getExtensionFromUrl(p)
             const data = await fetch(p).then(resp => resp.arrayBuffer())
             const media = new Media(data)
-            media.setFilename(`${media.checksum}${fileExt}`)
+            // 资源不显示，优先考虑是否是因为没有加_
+            media.setFilename(`_${media.checksum}${fileExt}`)
             this.addMedia(media)
             return this._getMatchPath(fromUrl, media.filename, p2)
         } else if (p.startsWith('data:')) {
             return match
         }
         // 相对路径
-        return this._getMatchPath(fromUrl, `_${path.basename(p)}`, p2)
+        const decodeName = decodeURI(decodeURI(p))
+        const name = this.mediaMap[path.join(path.dirname(filename), decodeName)]
+        return this._getMatchPath(fromUrl, name, p2)
     }
     addMedia (media: Media) {
         const hasMedia = this.mediaList.some((item) => item.checksum === media.checksum)

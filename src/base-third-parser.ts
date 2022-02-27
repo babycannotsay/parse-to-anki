@@ -8,9 +8,11 @@ export default class BaseThirdParser {
             title: '',
             front: '',
             back: '',
-            name: '',
             isEmpty: true,
         }
+    }
+    getName () {
+        return ''
     }
 
     /** parseJSON */

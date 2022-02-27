@@ -1,5 +1,5 @@
 import fs from 'fs'
-import Parser from '../../src/parser'
+import { Parser } from '../../src'
 import WolaiParser from './wolai-parser'
 async function execute () {
     const parser = new Parser(new WolaiParser)
