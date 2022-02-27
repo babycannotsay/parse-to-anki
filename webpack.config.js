@@ -35,10 +35,10 @@ module.exports = {
     output: {
         path: path.resolve(__dirname, 'dist'),
         filename: 'index.min.js',
+        globalObject: 'this',
         library: {
-            name: 'Parser',
+            name: 'ParseToAnki',
             type: 'umd',
-            export: 'Parser',
         },
     },
     target: 'web',

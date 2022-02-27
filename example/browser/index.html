@@ -15,7 +15,7 @@
         <input type="file" accept=".zip" id="upload" onchange="onChange(this.files)">
     </fieldset>
     <script>
-        class WolaiParser {
+        class WolaiParser extends ParseToAnki.BaseThirdParser {
             name = 'wolai'
 
             parseHTML (data) {
@@ -55,7 +55,7 @@
         }
         async function generateAnkiApkg (data) {
 
-            const parser = new Parser(new WolaiParser)
+            const parser = new ParseToAnki.Parser(new WolaiParser)
             const file = await parser.parseZip('rootDeckName', data)
             saveAs(file, 'test.apkg')
         }
