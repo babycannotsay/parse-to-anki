@@ -68,22 +68,31 @@ export default class Parser {
                     }
                 })
             }
+            const ids: number[] = []
             async function _parseHTML (filename: string, data: ArrayBuffer) {
                 const { isEmpty, front, back, title } = parseHTML(data)
                 if (isEmpty) return
                 const ankiFront = await mediaProcessor.parse(filename, front, mediaMap)
                 const ankiBack = await mediaProcessor.parse(filename, back, mediaMap)
                 const note = new Note(model)
+                let id = Date.now()
+                // 浏览器下容易出现id相同的情况
+                while (ids.includes(id)) {
+                    id = Date.now()
+                }
+                ids.push(id)
                 note
                     .setFieldsValue([ ankiFront, ankiBack ])
-                    .setId(Date.now())
+                    .setId(id)
                     .setName(title)
 
                 const dir = dirname(filename)
                 const rootDeck = basename(zipName, '.zip')
                 const deckName = /^[./\\]$/.test(dir) ? rootDeck : `${rootDeck}/${dir}`
                 if (!deckMap[deckName]) {
-                    deckMap[deckName] = new Deck(deckName.replace(/\//g, '::'))
+                    const deck = new Deck(deckName.replace(/\//g, '::'))
+                    deck.setId(id)
+                    deckMap[deckName] = deck
                 }
                 deckMap[deckName].addNote(note)
             }
