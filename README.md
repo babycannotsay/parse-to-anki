@@ -26,6 +26,7 @@ parse file and generate anki file
 - [ ] husky
 - [ ] 完善中文文档
 - [ ] 英文文档
+- [ ] 打包发布脚本
 
 ## Example
 - [node example](./example/node/example.ts)
