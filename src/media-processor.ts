@@ -1,7 +1,7 @@
 import path from 'path'
+import { Buffer } from 'buffer'
 import { Media } from 'anki-apkg-generator'
 import fetch from 'cross-fetch'
-
 
 const getExtensionFromUrl = (url: string) => {
     const extension = url
@@ -76,7 +76,9 @@ export default class MediaProcessor {
         return this._getMatchPath(fromUrl, name, p2)
     }
     addMedia (media: Media) {
-        const hasMedia = this.mediaList.some((item) => item.checksum === media.checksum)
+        const hasMedia = this.mediaList.some((item) =>
+            Buffer.from(item.data, 0).equals(Buffer.from(media.data, 0))
+        )
         if (hasMedia) { return }
 
         this.mediaList.push(media)
