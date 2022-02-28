@@ -3,14 +3,16 @@ import EventEmitter from 'events'
 import { extname, basename, dirname } from 'path'
 import { Deck, Note, Model, Field, Card, Package, Media, Template } from 'anki-apkg-generator'
 import MediaProcessor from './media-processor'
-import BaseThirdParser from './base-third-parser'
+import BaseThirdParser, { IdMaps } from './base-third-parser'
 
 export { BaseThirdParser }
+
 
 export default class Parser extends EventEmitter {
     public thirdParser: BaseThirdParser
     public templates: Template[]
     public fields: Field[]
+    public idMaps: IdMaps
     constructor (thirdParser: BaseThirdParser) {
         super()
         this.thirdParser = thirdParser
@@ -25,6 +27,20 @@ export default class Parser extends EventEmitter {
             { name: 'Question' },
             { name: 'Answer' },
         ].map((f, index) => new Field(f.name).setOrd(index))
+        this.idMaps = thirdParser.getIdMaps()
+    }
+
+    private getId (idMap: IdMaps[keyof IdMaps], name: string) {
+        if (idMap[name]) {
+            return idMap[name]
+        }
+        const ids: number[] = Object.values(idMap)
+        let id = Date.now()
+        while (ids.includes(id)) {
+            id = Date.now()
+        }
+        idMap[name] = id
+        return id
     }
 
     // 解析->转换->下载
@@ -34,11 +50,15 @@ export default class Parser extends EventEmitter {
             this.emit('parseZip', 'Zip file parsing is completed and start parsing files in zip file...')
             const { files } = zip
             const mediaProcessor = new MediaProcessor()
-            const { templates, fields, thirdParser } = this
+            const { templates, fields, thirdParser, idMaps, getId } = this
+            const { modelIdMap, deckIdMap, noteIdMap } = idMaps
             const parseHTML = thirdParser.parseHTML.bind(thirdParser)
             const card = new Card()
             const model = new Model(card)
-            model.setName(thirdParser.getName())
+            const modelName = thirdParser.getName()
+            model.setName(modelName)
+
+            model.setId(getId(modelIdMap, modelName))
             model.setFields(fields)
 
             const mediaMap: { [key: string]: string } = {}
@@ -75,22 +95,15 @@ export default class Parser extends EventEmitter {
                     }
                 })
             }
-            const ids: number[] = []
             async function _parseHTML (filename: string, data: ArrayBuffer) {
                 const { isEmpty, front, back, title } = parseHTML(data)
                 if (isEmpty) return
                 const ankiFront = await mediaProcessor.parse(filename, front, mediaMap)
                 const ankiBack = await mediaProcessor.parse(filename, back, mediaMap)
                 const note = new Note(model)
-                let id = Date.now()
-                // 浏览器下容易出现id相同的情况
-                while (ids.includes(id)) {
-                    id = Date.now()
-                }
-                ids.push(id)
                 note
                     .setFieldsValue([ ankiFront, ankiBack ])
-                    .setId(id)
+                    .setId(getId(noteIdMap, title))
                     .setName(title)
 
                 const dir = dirname(filename)
@@ -98,7 +111,7 @@ export default class Parser extends EventEmitter {
                 const deckName = /^[./\\]$/.test(dir) ? rootDeck : `${rootDeck}/${dir}`
                 if (!deckMap[deckName]) {
                     const deck = new Deck(deckName.replace(/\//g, '::'))
-                    deck.setId(id)
+                    deck.setId(getId(deckIdMap, deckName))
                     deckMap[deckName] = deck
                 }
                 deckMap[deckName].addNote(note)
@@ -107,6 +120,7 @@ export default class Parser extends EventEmitter {
                 await _parseHTML(filename, data)
                 this.emit('parseHTML', filename)
             }
+            thirdParser.setIdMaps(this.idMaps)
             this.emit('compress')
             card.setTemplates(templates)
             const pkg = new Package(Object.values(deckMap), mediaProcessor.mediaList)

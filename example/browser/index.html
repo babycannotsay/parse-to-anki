@@ -52,6 +52,15 @@
                 return this.name
             }
 
+            getIdMaps () {
+                const idMaps = JSON.parse(localStorage.getItem('idMaps'))
+                return idMaps || super.getIdMaps()
+            }
+
+            setIdMaps (idMaps) {
+                localStorage.setItem('idMaps', JSON.stringify(idMaps))
+            }
+
             parseHTML (data) {
                 const dec = new TextDecoder('utf-8')
                 const dom = new DOMParser()
@@ -113,6 +122,7 @@
         }
         const onChange = function (files) {
             const file = files[0]
+            if (!file) return
             const basename = file.name.replace('.zip', '')
             const reader = new FileReader()
             const $status = document.querySelector('.status')

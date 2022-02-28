@@ -1,4 +1,13 @@
 import { Media } from 'anki-apkg-generator'
+
+
+export interface IdMap {
+    [key: string]: number
+}
+
+export interface IdMaps {
+    modelIdMap: IdMap, deckIdMap: IdMap, noteIdMap: IdMap
+}
 export default class BaseThirdParser {
     name = ''
 
@@ -11,6 +20,17 @@ export default class BaseThirdParser {
             isEmpty: true,
         }
     }
+
+    getIdMaps () {
+        return {
+            modelIdMap: {},
+            noteIdMap: {},
+            deckIdMap: {},
+        }
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    setIdMaps (_: IdMaps) {}
     getName () {
         return ''
     }
