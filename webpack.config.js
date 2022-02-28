@@ -11,7 +11,9 @@ module.exports = {
         fallback: {
             fs: false,
             crypto: false,
-            path: require.resolve('path-browserify')
+            buffer: require.resolve('buffer'),
+            path: require.resolve('path-browserify'),
+            events: require.resolve('events')
         }
     },
     module: {

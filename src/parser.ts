@@ -1,16 +1,18 @@
 import Zip from 'jszip'
-import { extname, basename, dirname, join } from 'path'
+import EventEmitter from 'events'
+import { extname, basename, dirname } from 'path'
 import { Deck, Note, Model, Field, Card, Package, Media, Template } from 'anki-apkg-generator'
 import MediaProcessor from './media-processor'
 import BaseThirdParser from './base-third-parser'
 
 export { BaseThirdParser }
 
-export default class Parser {
+export default class Parser extends EventEmitter {
     public thirdParser: BaseThirdParser
     public templates: Template[]
     public fields: Field[]
     constructor (thirdParser: BaseThirdParser) {
+        super()
         this.thirdParser = thirdParser
         this.templates = [
             {
@@ -25,8 +27,11 @@ export default class Parser {
         ].map((f, index) => new Field(f.name).setOrd(index))
     }
 
+    // 解析->转换->下载
     parseZip (zipName: string, data: ArrayBuffer) {
+        this.emit('parseZip', 'Parsing zip file...')
         return Zip.loadAsync(data).then(async zip => {
+            this.emit('parseZip', 'Zip file parsing is completed and start parsing files in zip file...')
             const { files } = zip
             const mediaProcessor = new MediaProcessor()
             const { templates, fields, thirdParser } = this
@@ -53,9 +58,11 @@ export default class Parser {
                     } else if (/(png|gif|webp|jpeg|jpg)/.test(extname(file.name))) {
                         const media = new Media(data)
                         const fileExt = extname(file.name)
+                        console.time(file.name)
                         media.setFilename(`_${media.checksum}${fileExt}`)
                         mediaMap[file.name] = media.filename
                         mediaProcessor.addMedia(media)
+                        console.timeEnd(file.name)
                     } else {
                         const name = `_${basename(file.name)}`
                         if (extname(file.name) === '.css') {
@@ -98,7 +105,9 @@ export default class Parser {
             }
             for (const { data, filename } of htmlQueue) {
                 await _parseHTML(filename, data)
+                this.emit('parseHTML', filename)
             }
+            this.emit('compress')
             card.setTemplates(templates)
             const pkg = new Package(Object.values(deckMap), mediaProcessor.mediaList)
             return pkg.writeToFile()

@@ -7,13 +7,43 @@
     <script src="https://cdn.jsdelivr.net/npm/parse-to-anki/dist/index.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/file-saver/dist/FileSaver.min.js"></script>
     <title>Document</title>
-    
+    <style>
+        .progress {
+            margin-top: 12px;
+        }
+        details > div {
+            padding-left: 16px;
+        }
+        .parse-info {
+            padding-left: 0;
+        }
+        .parse-info h3 {
+            display: inline;
+        }
+        details .log {
+            overflow: auto;
+            max-height: 300px;
+            margin-top: 10px;
+        }
+        .check {
+            color: #52c41a;
+        }
+        summary:empty::marker {
+            content: '';
+        }
+    </style>
 </head>
 <body>
-    <fieldset>
-        <legend>解析为apkg文件</legend>
-        <input type="file" accept=".zip" id="upload" onchange="onChange(this.files)">
-    </fieldset>
+    <h2>zip file to anki apkg</h2>
+    <input style="width: 100%" type="file" accept=".zip" id="upload" onchange="onChange(this.files)">
+    <progress value="0" max="100" class="progress"></progress>
+    <h3 class="status"></h3>
+    <div class="overview"></div>
+    <h3 class="parse-status"></h3>
+    <details>
+        <summary class="parse-info"></summary>
+        <div class="log"></div>
+    </details>
     <script>
         class WolaiParser extends ParseToAnki.BaseThirdParser {
             name = 'wolai'
@@ -61,14 +91,49 @@
         }
         async function generateAnkiApkg (data, basename) {
             const parser = new ParseToAnki.Parser(new WolaiParser)
+            const $status = document.querySelector('.parse-status')
+            const $info = document.querySelector('.parse-info')
+            parser.on('parseZip', info => {
+                $status.innerHTML = info
+            })
+            parser.on('parseHTML', name => {
+                if ($info.innerText === '') {
+                    $info.innerHTML = '<h3>parsing log</h3>'
+                }
+                const div = document.createElement('div')
+                div.innerHTML = `${name} <span class="check">&#10003;</span>`
+                document.querySelector('details .log').appendChild(div)
+            })
+            parser.on('compress', () => {
+                $status.innerHTML = 'Parsing is completed, start compressing files'
+            })
             const file = await parser.parseZip(basename, data)
+            $status.innerHTML = 'Compression is complete, start downloading'
             saveAs(file, `${basename}.apkg`)
         }
         const onChange = function (files) {
             const file = files[0]
             const basename = file.name.replace('.zip', '')
             const reader = new FileReader()
+            const $status = document.querySelector('.status')
+            const $progress = document.querySelector('.progress')
+            const $overview = document.querySelector('.overview')
+            reader.onprogress = (e) => {
+                const { loaded, total } = e
+                const percent = Math.round(loaded / total * 100)
+                $progress.value = percent
+                $status.innerHTML = `${percent}% uploaded...`
+                $overview.innerHTML = "Uploaded " + loaded + " bytes of " + total
+            }
+            reader.onerror = () => {
+                $status.innerHTML = 'Upload failed'
+            }
+            reader.onabort = () => {
+                $status.innerHTML = 'Upload aborted'
+            }
             reader.onload = (event) => {
+                $status.innerHTML = ''
+                $overview.innerHTML = 'Upload successfully'
                 generateAnkiApkg(event.target.result, basename)
             }
             reader.readAsArrayBuffer(file)
