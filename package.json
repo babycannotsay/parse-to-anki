@@ -1,6 +1,6 @@
 {
   "name": "parse-to-anki",
-  "version": "1.0.13",
+  "version": "1.0.14",
   "description": "parse file and generate anki file",
   "main": "lib/index.js",
   "browser": {
