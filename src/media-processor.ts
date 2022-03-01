@@ -14,6 +14,9 @@ const getExtensionFromUrl = (url: string) => {
 }
 
 const checkIfFile = (url: string) => {
+    if (/\.htm(l)?/.test(url)) {
+        return false
+    }
     return new URL(url).pathname.split('/').pop()!.indexOf('.') > 0
 }
 
