@@ -32,7 +32,7 @@ export default class BaseThirdParser {
     // eslint-disable-next-line @typescript-eslint/no-empty-function
     setIdMaps (_: IdMaps) {}
     getName () {
-        return ''
+        return this.name
     }
 
     /** parseJSON */
@@ -44,8 +44,10 @@ export default class BaseThirdParser {
     }[]> {
         return []
     }
-    addSourceMedia () { return '' }
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    addSourceMedia () {}
     getMediaList (): Media[] {
         return []
     }
+    getTemplates (): string[] { return [] }
 }

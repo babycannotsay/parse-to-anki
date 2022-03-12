@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://cdn.jsdelivr.net/npm/parse-to-anki/dist/index.min.js"></script>
+    <script src="../../dist/index.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/file-saver/dist/FileSaver.min.js"></script>
     <title>Document</title>
     <style>
@@ -99,7 +99,7 @@
             }
         }
         async function generateAnkiApkg (data, basename) {
-            const parser = new ParseToAnki.Parser(new WolaiParser)
+            const parser = new ParseToAnki.Parser(new WolaiParser, basename)
             const $status = document.querySelector('.parse-status')
             const $info = document.querySelector('.parse-info')
             parser.on('parseZip', info => {
@@ -116,7 +116,7 @@
             parser.on('compress', () => {
                 $status.innerHTML = 'Parsing is completed, start compressing files'
             })
-            const file = await parser.parseZip(basename, data)
+            const file = await parser.parseZip(data)
             $status.innerHTML = 'Compression is complete, start downloading'
             saveAs(file, `${basename}.apkg`)
         }

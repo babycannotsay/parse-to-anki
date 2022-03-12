@@ -13,7 +13,12 @@ export default class Parser extends EventEmitter {
     public templates: Template[]
     public fields: Field[]
     public idMaps: IdMaps
-    constructor (thirdParser: BaseThirdParser) {
+    public deckMap: { [key: string]: Deck } = {}
+    public mediaMap: { [key: string]: string } = {}
+    public mediaProcessor: MediaProcessor = new MediaProcessor()
+    public zipName: string
+    public model!: Model
+    constructor (thirdParser: BaseThirdParser, zipName: string) {
         super()
         this.thirdParser = thirdParser
         this.templates = [
@@ -28,9 +33,10 @@ export default class Parser extends EventEmitter {
             { name: 'Answer' },
         ].map((f, index) => new Field(f.name).setOrd(index))
         this.idMaps = thirdParser.getIdMaps()
+        this.zipName = zipName
     }
 
-    private getId (idMap: IdMaps[keyof IdMaps], name: string) {
+    private _getId (idMap: IdMaps[keyof IdMaps], name: string) {
         if (idMap[name]) {
             return idMap[name]
         }
@@ -39,31 +45,78 @@ export default class Parser extends EventEmitter {
         while (ids.includes(id)) {
             id = Date.now()
         }
-        idMap[name] = id
         return id
     }
 
+    private _setId (id: number, name: string, idMap: IdMaps[keyof IdMaps]) {
+        idMap[name] = id
+    }
+
+    private _setModel (card: Card) {
+        const { modelIdMap } = this.idMaps
+        this.model = new Model(card)
+        const modelName = this.thirdParser.getName()
+        this.model.setName(modelName)
+        const modelId = this._getId(modelIdMap, modelName)
+        this._setId(modelId, modelName, modelIdMap)
+        this.model.setId(modelId)
+        this.model.setFields(this.fields)
+    }
+
+    private _setNote ({ ankiFront, ankiBack, title, tags = [] }: { ankiFront: string, ankiBack: string, title: string, tags?: string[] }) {
+        const { noteIdMap } = this.idMaps
+        const note = new Note(this.model)
+        const noteId = this._getId(noteIdMap, title)
+        this._setId(noteId, title, noteIdMap)
+        note
+            .setFieldsValue([ ankiFront, ankiBack ])
+            .setId(noteId)
+            .setName(title)
+            .setTags(tags)
+        return note
+    }
+
+    private _setDeck (note: Note, filename: string) {
+        const { deckIdMap } = this.idMaps
+        const dir = dirname(filename)
+        const rootDeck = basename(this.zipName, '.zip')
+        const deckName = /^[./\\]$/.test(dir) ? rootDeck : `${rootDeck}/${dir}`
+        if (!this.deckMap[deckName]) {
+            const deck = new Deck(deckName.replace(/\//g, '::'))
+            const deckId = this._getId(deckIdMap, deckName)
+            this._setId(deckId, deckName, deckIdMap)
+            deck.setId(deckId)
+            this.deckMap[deckName] = deck
+        }
+        this.deckMap[deckName].addNote(note)
+    }
+
+    private _setTemplate (templates: string[]) {
+        this.templates[0].qfmt = `
+            ${templates.join('')}
+            ${this.templates[0].qfmt}
+        `
+    }
+
+    async _parseHTML (filename: string, data: ArrayBuffer) {
+        const { isEmpty, front, back, title } = this.thirdParser.parseHTML(data)
+        if (isEmpty) return
+        const ankiFront = await this.mediaProcessor.parse(filename, front, this.mediaMap)
+        const ankiBack = await this.mediaProcessor.parse(filename, back, this.mediaMap)
+        const note = this._setNote({ ankiFront, ankiBack, title })
+        this._setDeck(note, filename)
+    }
+
     // 解析->转换->下载
-    parseZip (zipName: string, data: ArrayBuffer) {
+    parseZip (data: ArrayBuffer) {
         this.emit('parseZip', 'Parsing zip file...')
         return Zip.loadAsync(data).then(async zip => {
             this.emit('parseZip', 'Zip file parsing is completed and start parsing files in zip file...')
             const { files } = zip
-            const mediaProcessor = new MediaProcessor()
-            const { templates, fields, thirdParser, idMaps, getId } = this
-            const { modelIdMap, deckIdMap, noteIdMap } = idMaps
-            const parseHTML = thirdParser.parseHTML.bind(thirdParser)
+            const { templates, thirdParser } = this
             const card = new Card()
-            const model = new Model(card)
-            const modelName = thirdParser.getName()
-            model.setName(modelName)
+            this._setModel(card)
 
-            model.setId(getId(modelIdMap, modelName))
-            model.setFields(fields)
-
-            const mediaMap: { [key: string]: string } = {}
-
-            const deckMap: { [key: string]: Deck } = {}
             const htmlQueue: { filename: string, data: ArrayBuffer }[] = []
             for (const file of Object.values(files)) {
                 if (file.dir) {
@@ -78,81 +131,52 @@ export default class Parser extends EventEmitter {
                     } else if (/(png|gif|webp|jpeg|jpg)/.test(extname(file.name))) {
                         const media = new Media(data)
                         const fileExt = extname(file.name)
-                        console.time(file.name)
                         media.setFilename(`_${media.checksum}${fileExt}`)
-                        mediaMap[file.name] = media.filename
-                        mediaProcessor.addMedia(media)
-                        console.timeEnd(file.name)
+                        this.mediaMap[file.name] = media.filename
+                        this.mediaProcessor.addMedia(media)
                     } else {
                         const name = `_${basename(file.name)}`
                         if (extname(file.name) === '.css') {
-                            templates[0].qfmt = `
-                                    <link rel="stylesheet", href="${name}"></link>
-                                    ${templates[0].qfmt}
-                                `
+                            this._setTemplate([
+                                `<link rel="stylesheet", href="${name}"></link>`
+                            ])
                         }
-                        mediaProcessor.addMedia(new Media(data, name))
+                        this.mediaProcessor.addMedia(new Media(data, name))
                     }
                 })
             }
-            async function _parseHTML (filename: string, data: ArrayBuffer) {
-                const { isEmpty, front, back, title } = parseHTML(data)
-                if (isEmpty) return
-                const ankiFront = await mediaProcessor.parse(filename, front, mediaMap)
-                const ankiBack = await mediaProcessor.parse(filename, back, mediaMap)
-                const note = new Note(model)
-                note
-                    .setFieldsValue([ ankiFront, ankiBack ])
-                    .setId(getId(noteIdMap, title))
-                    .setName(title)
-
-                const dir = dirname(filename)
-                const rootDeck = basename(zipName, '.zip')
-                const deckName = /^[./\\]$/.test(dir) ? rootDeck : `${rootDeck}/${dir}`
-                if (!deckMap[deckName]) {
-                    const deck = new Deck(deckName.replace(/\//g, '::'))
-                    deck.setId(getId(deckIdMap, deckName))
-                    deckMap[deckName] = deck
-                }
-                deckMap[deckName].addNote(note)
-            }
             for (const { data, filename } of htmlQueue) {
-                await _parseHTML(filename, data)
+                await this._parseHTML(filename, data)
                 this.emit('parseHTML', filename)
             }
             thirdParser.setIdMaps(this.idMaps)
             this.emit('compress')
             card.setTemplates(templates)
-            const pkg = new Package(Object.values(deckMap), mediaProcessor.mediaList)
+            const pkg = new Package(Object.values(this.deckMap), this.mediaProcessor.mediaList)
             return pkg.writeToFile()
         })
     }
 
     async parseJSON () {
-        const { templates, fields, thirdParser } = this
+        const { thirdParser } = this
         const { name } = thirdParser
-        const template = thirdParser.addSourceMedia()
+        thirdParser.addSourceMedia()
+        const newTemplates = thirdParser.getTemplates()
         const notes = await thirdParser.getNotes()
         const card = new Card()
-        const model = new Model(card)
-        model.setFields(fields)
-        model.setName(name)
+        this._setModel(card)
         const deck = new Deck(name)
         for (const { tags = [], ankiFront, ankiBack, title } of notes) {
-            const note = new Note(model)
-            note
-                .setFieldsValue([ ankiFront, ankiBack ])
-                .setId(Number(title))
-                .setName(title)
-                .setTags(tags)
-
+            const note = this._setNote({
+                ankiFront,
+                ankiBack,
+                title,
+                tags
+            })
             deck.addNote(note)
         }
-        templates[0].qfmt = `
-            ${template}
-            ${templates[0].qfmt}
-        `
-        card.setTemplates(templates)
+        this._setTemplate(newTemplates)
+        card.setTemplates(this.templates)
         const mediaList = thirdParser.getMediaList()
         const pkg = new Package(deck, mediaList)
         return pkg.writeToFile()
